@@ -29,28 +29,61 @@ _EXTRACT_JS = r"""
     const id = m[1];
     if (seen.has(id)) continue;
     seen.add(id);
-    // walk up to the card container (a big-enough ancestor)
+    // walk up until we hit the WHOLE card — an ancestor that has an image or the
+    // 'Sponsored' label AND enough text (the metadata-only block is skipped).
     let el = n.parentElement, card = null;
-    for (let k = 0; k < 12 && el; k++, el = el.parentElement) {
-      if ((el.innerText || '').length > 60) { card = el; break; }
+    for (let k = 0; k < 16 && el; k++, el = el.parentElement) {
+      const it = el.innerText || '';
+      if (it.length > 120 && (el.querySelector('img') || /Sponsored/i.test(it))) {
+        card = el;
+        if (el.querySelector('img')) break;   // prefer the container that holds the creative
+      }
     }
-    if (!card) continue;
-    const text = (card.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
+    if (!card) card = n.parentElement;
+    const full = (card.innerText || '').replace(/\s+/g, ' ').trim();
+    // ad copy = text after the 'Sponsored' label
+    const sp = full.search(/\bSponsored\b/i);
+    let body = sp >= 0 ? full.slice(sp + 9).trim() : full;
+    // advertiser name: prefer a real page link (facebook.com/<page>, not /ads/),
+    // rejecting Ad-Library UI chrome text.
+    let page = '';
+    for (const a of card.querySelectorAll('a[href]')) {
+      const href = a.href || '';
+      const txt = (a.innerText || '').replace(/​/g, '').trim();
+      if (/facebook\.com\/(?!ads\/)/i.test(href) && txt.length >= 2 && txt.length <= 60
+          && !/details|drop.?down|versions|library id|sponsored|see |report|active/i.test(txt)) {
+        page = txt; break;
+      }
+    }
     // biggest image in the card = the creative
     let img = '', area = 0;
     card.querySelectorAll('img').forEach(im => {
       const a = (im.naturalWidth || im.width || 0) * (im.naturalHeight || im.height || 0);
       if (a > area && im.src && im.src.startsWith('http')) { area = a; img = im.src; }
     });
-    // page/advertiser name = first profile link text
-    const a = card.querySelector('a[href*="facebook.com"]');
-    out.push({ ad_id: id, body: text, image_url: img,
-               page_name: a ? (a.innerText || '').trim().slice(0, 120) : '',
+    out.push({ ad_id: id, body: body.slice(0, 1600), image_url: img,
+               page_name: page.slice(0, 100),
                snapshot_url: 'https://www.facebook.com/ads/library/?id=' + id });
+    if (out.length >= 400) break;
   }
   return out;
 }
 """
+
+
+def _dismiss_consent(page) -> None:
+    """Best-effort: clear Meta's cookie-consent overlay (privacy-preserving — decline
+    optional cookies where offered) so the ad grid can render."""
+    for label in ("Decline optional cookies", "Only allow essential cookies",
+                  "Allow all cookies", "Allow all", "Accept all"):
+        try:
+            btn = page.get_by_role("button", name=label)
+            if btn.count():
+                btn.first.click(timeout=2500)
+                page.wait_for_timeout(1200)
+                return
+        except Exception:
+            continue
 
 
 def _download(page, url: str, dest: str) -> str | None:
@@ -77,16 +110,24 @@ def fetch_ads(cfg, image_dir: str = "output/images"):
     status = "active" if cfg.SEARCH_ACTIVE_ONLY else "all"
     ads: dict[str, dict] = {}
 
+    ua = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+          "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=cfg.HEADLESS)
-        page = browser.new_page(viewport={"width": 1400, "height": 1000})
+        # ALWAYS headed — Meta serves a degraded (empty) page to headless browsers,
+        # so a visible window is required for the ad grid to render. On a headless
+        # server, run behind a virtual display (Xvfb). cfg.HEADLESS is ignored here.
+        browser = p.chromium.launch(headless=False, args=[
+            "--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage"])
+        page = browser.new_page(viewport={"width": 1400, "height": 1000}, user_agent=ua)
         for term in cfg.SEARCH_TERMS:
             for country in cfg.SEARCH_COUNTRIES:
                 url = _LIB_URL.format(status=status, country=country,
                                       q=re.sub(r"\s+", "%20", term))
                 try:
                     page.goto(url, wait_until="domcontentloaded", timeout=45000)
-                    page.wait_for_timeout(4000)
+                    page.wait_for_timeout(3000)
+                    _dismiss_consent(page)
+                    page.wait_for_timeout(2500)
                     for _ in range(cfg.SCROLL_PASSES):
                         page.mouse.wheel(0, 3000)
                         page.wait_for_timeout(800)
