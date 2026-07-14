@@ -1,0 +1,25 @@
+# secrets / local config
+.env
+config.json
+
+# runtime output (scraped ads, findings, downloaded creatives)
+output/
+
+# uploaded reference images (bring your own — keep out of git)
+refs/logos/*
+refs/faces/*
+!refs/logos/.gitkeep
+!refs/faces/.gitkeep
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

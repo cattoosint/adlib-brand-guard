@@ -1,0 +1,15 @@
+# --- core (web app + scanning) ---
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9      # file uploads
+python-dotenv>=1.0
+httpx>=0.27                  # Telegram + image download
+playwright>=1.44            # Ad Library scraping (then: python -m playwright install chromium)
+
+# --- optional: image signals (logo pHash + executive-face match) ---
+Pillow>=10.0
+imagehash>=4.3
+numpy>=1.24
+
+# --- optional: sharper logo template matching / face crops (not required) ---
+# opencv-python-headless>=4.9

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AdLib Brand Guard</title>
+<style>
+  :root { --bg:#0e1116; --panel:#171b22; --line:#262c36; --fg:#e6e9ef; --mut:#9aa4b2;
+          --accent:#f59e0b; --red:#ef4444; --amber:#f59e0b; --green:#22c55e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
+  header { padding:16px 22px; border-bottom:1px solid var(--line);
+           display:flex; align-items:center; gap:12px; }
+  header h1 { font-size:17px; margin:0; }
+  header .tag { color:var(--mut); font-size:12px; }
+  .wrap { display:grid; grid-template-columns:380px 1fr; gap:0; min-height:calc(100vh - 58px); }
+  .side { border-right:1px solid var(--line); padding:18px; overflow:auto; }
+  .main { padding:18px 22px; overflow:auto; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--mut);
+       margin:22px 0 10px; }
+  h2:first-child { margin-top:0; }
+  label { display:block; font-size:12px; color:var(--mut); margin:10px 0 4px; }
+  input[type=text], input[type=number], textarea, input[type=password] {
+    width:100%; background:#0b0e13; border:1px solid var(--line); color:var(--fg);
+    border-radius:8px; padding:8px 10px; font:inherit; }
+  textarea { resize:vertical; min-height:38px; }
+  .row { display:flex; gap:10px; } .row>* { flex:1; }
+  .chk { display:flex; align-items:center; gap:8px; margin:8px 0; color:var(--fg); }
+  button { background:var(--accent); color:#111; border:0; border-radius:8px;
+           padding:9px 14px; font-weight:600; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:default; }
+  .refs { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .refs .r { position:relative; }
+  .refs img { width:66px; height:66px; object-fit:contain; background:#fff;
+              border-radius:8px; border:1px solid var(--line); }
+  .refs .x { position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff;
+             border-radius:50%; width:18px; height:18px; font-size:12px; line-height:18px;
+             text-align:center; cursor:pointer; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+          padding:14px; margin-bottom:12px; display:grid; grid-template-columns:120px 1fr;
+          gap:14px; }
+  .card img { width:120px; height:120px; object-fit:cover; border-radius:8px; background:#0b0e13; }
+  .sev { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px;
+         border-radius:999px; text-transform:uppercase; }
+  .sev.high { background:rgba(239,68,68,.15); color:#fca5a5; }
+  .sev.medium { background:rgba(245,158,11,.15); color:#fcd34d; }
+  .sev.low { background:rgba(148,163,184,.15); color:#cbd5e1; }
+  .exec { color:#fca5a5; font-weight:600; }
+  .reasons { color:var(--mut); font-size:13px; margin:6px 0; }
+  a { color:var(--accent); }
+  .muted { color:var(--mut); }
+  .bar { display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .pill { background:var(--panel); border:1px solid var(--line); border-radius:999px;
+          padding:5px 12px; font-size:12px; }
+  .saved { color:var(--green); font-size:12px; }
+  hr { border:0; border-top:1px solid var(--line); margin:18px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ AdLib Brand Guard</h1>
+  <span class="tag">Meta Ad Library brand-impersonation monitor — configure, scan, review</span>
+</header>
+<div class="wrap">
+  <!-- ------------------------------ config side ------------------------------ -->
+  <div class="side">
+    <h2>Brand</h2>
+    <label>Brand name</label><input id="brand_name" type="text">
+    <label>Brand tokens (comma — words that identify your brand in ad text)</label>
+    <textarea id="brand_tokens"></textarea>
+    <label>Official domains (comma — legit links)</label><textarea id="brand_domains"></textarea>
+    <label>Official page names (comma — whitelist)</label><textarea id="official_pages"></textarea>
+    <label>Executive names for CEO-bait (comma — any language)</label>
+    <textarea id="exec_names"></textarea>
+
+    <h2>Search</h2>
+    <label>Search terms (comma)</label><textarea id="search_terms"></textarea>
+    <label>Countries (ISO-2, comma)</label><input id="search_countries" type="text">
+    <div class="row">
+      <div><label>Max ads</label><input id="max_ads" type="number"></div>
+      <div><label>Scroll passes</label><input id="scroll_passes" type="number"></div>
+    </div>
+    <div class="chk"><input id="active_only" type="checkbox"><label style="margin:0">Active ads only</label></div>
+    <div class="chk"><input id="headless" type="checkbox"><label style="margin:0">Headless browser</label></div>
+
+    <h2>Detection tuning</h2>
+    <div class="row">
+      <div><label>Weak-signal threshold</label><input id="weak_flag_threshold" type="number"></div>
+      <div><label>Logo pHash max dist</label><input id="logo_phash_max_dist" type="number"></div>
+    </div>
+    <label>Face match min score (0–1)</label><input id="face_match_min_score" type="text">
+    <div class="chk"><input id="logo_match_enabled" type="checkbox"><label style="margin:0">Logo matching</label></div>
+    <div class="chk"><input id="face_match_enabled" type="checkbox"><label style="margin:0">Executive-face matching</label></div>
+
+    <h2>Reference kit — logos</h2>
+    <input type="file" id="up_logos" accept="image/*">
+    <div class="refs" id="refs_logos"></div>
+    <h2>Reference kit — executive faces</h2>
+    <input type="file" id="up_faces" accept="image/*">
+    <div class="refs" id="refs_faces"></div>
+
+    <h2>Telegram alerts (optional)</h2>
+    <div class="chk"><input id="telegram_enabled" type="checkbox"><label style="margin:0">Enable</label></div>
+    <label>Bot token</label><input id="telegram_bot_token" type="password">
+    <label>Chat ID</label><input id="telegram_chat_id" type="text">
+    <div style="margin-top:8px"><button class="ghost" onclick="tgTest()">Test Telegram</button></div>
+
+    <hr>
+    <div class="bar">
+      <button onclick="saveCfg()">Save config</button>
+      <span class="saved" id="saved"></span>
+    </div>
+  </div>
+
+  <!-- ------------------------------ findings main ---------------------------- -->
+  <div class="main">
+    <div class="bar">
+      <button id="scanBtn" onclick="startScan()">▶ Run scan</button>
+      <span class="pill" id="status">idle</span>
+      <span class="pill" id="counts"></span>
+      <span class="muted" id="gen"></span>
+    </div>
+    <div id="findings"><p class="muted">No findings yet — configure your brand + reference kit, then run a scan.</p></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const CSV = ["brand_tokens","brand_domains","official_pages","exec_names","search_terms","search_countries"];
+const NUM = ["max_ads","scroll_passes","weak_flag_threshold","logo_phash_max_dist"];
+const BOOL = ["active_only","headless","logo_match_enabled","face_match_enabled","telegram_enabled"];
+
+async function loadCfg(){
+  const c = await (await fetch('/api/config')).json();
+  for(const k in c){ const el=$(k); if(!el) continue;
+    if(BOOL.includes(k)) el.checked=!!c[k];
+    else if(CSV.includes(k)) el.value=(c[k]||[]).join(', ');
+    else el.value=c[k]; }
+  loadRefs('logos'); loadRefs('faces');
+}
+async function saveCfg(){
+  const body={};
+  for(const el of document.querySelectorAll('.side input, .side textarea')){
+    const k=el.id; if(!k) continue;
+    if(BOOL.includes(k)) body[k]=el.checked;
+    else if(CSV.includes(k)) body[k]=el.value.split(',').map(s=>s.trim()).filter(Boolean);
+    else if(NUM.includes(k)) body[k]=Number(el.value);
+    else if(k==='face_match_min_score') body[k]=parseFloat(el.value);
+    else body[k]=el.value;
+  }
+  await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  $('saved').textContent='✓ saved'; setTimeout(()=>$('saved').textContent='',1500);
+}
+async function loadRefs(kind){
+  const list = await (await fetch('/api/refs/'+kind)).json();
+  const box=$('refs_'+kind); box.innerHTML='';
+  list.forEach(n=>{ const d=document.createElement('div'); d.className='r';
+    d.innerHTML=`<img src="/api/refs/${kind}/${encodeURIComponent(n)}" title="${n}">
+                 <span class="x" onclick="delRef('${kind}','${n}')">×</span>`;
+    box.appendChild(d); });
+}
+async function delRef(kind,name){ await fetch(`/api/refs/${kind}/${encodeURIComponent(name)}`,{method:'DELETE'}); loadRefs(kind); }
+function bindUpload(kind){ $('up_'+kind).addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f) return; const fd=new FormData(); fd.append('file',f);
+  await fetch('/api/refs/'+kind,{method:'POST',body:fd}); e.target.value=''; loadRefs(kind); }); }
+bindUpload('logos'); bindUpload('faces');
+
+async function tgTest(){ await saveCfg(); const r=await (await fetch('/api/telegram/test',{method:'POST'})).json();
+  alert(r.ok? 'Telegram connected ✔' : 'Telegram failed — check token/chat id'); }
+
+let poll=null;
+async function startScan(){
+  await saveCfg();
+  const r=await fetch('/api/scan',{method:'POST'});
+  if(r.status===409){ alert('A scan is already running.'); return; }
+  $('scanBtn').disabled=true; pollState();
+}
+async function pollState(){
+  clearInterval(poll);
+  poll=setInterval(async()=>{
+    const s=await (await fetch('/api/scan/state')).json();
+    $('status').textContent = s.running ? 'scanning…' : (s.last_error? 'error' : 'done');
+    if(!s.running){ clearInterval(poll); $('scanBtn').disabled=false; loadFindings();
+      if(s.last_error) $('status').title=s.last_error; }
+  },1500);
+}
+async function loadFindings(){
+  const d=await (await fetch('/api/findings')).json();
+  $('counts').textContent=`${d.flagged} flagged / ${d.scanned} scanned`;
+  $('gen').textContent=d.generated_at? new Date(d.generated_at*1000).toLocaleString():'';
+  const box=$('findings');
+  const flagged=(d.findings||[]).filter(f=>f.flag);
+  if(!flagged.length){ box.innerHTML='<p class="muted">No suspicious ads in the last scan.</p>'; return; }
+  box.innerHTML=flagged.map(f=>`
+    <div class="card">
+      <img src="/api/image?ad_id=${encodeURIComponent(f.ad_id)}" onerror="this.style.visibility='hidden'">
+      <div>
+        <span class="sev ${f.severity}">${f.severity}</span>
+        ${f.exec_bait?'<span class="exec"> 🔴 executive / deepfake</span>':''}
+        <b> ${f.page_name||'unknown page'}</b>
+        <div class="reasons">${(f.reasons||[]).join(' · ')}</div>
+        <div class="muted">${(f.body_preview||'').replace(/</g,'&lt;')}</div>
+        ${f.snapshot_url?`<div style="margin-top:6px"><a href="${f.snapshot_url}" target="_blank">View in Meta Ad Library →</a></div>`:''}
+      </div>
+    </div>`).join('');
+}
+loadCfg(); loadFindings();
+</script>
+</body>
+</html>
